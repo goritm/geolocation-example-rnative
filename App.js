@@ -26,55 +26,41 @@ MapboxGL.setAccessToken(
   'pk.eyJ1Ijoiam9zZXNhbmRvdmFscCIsImEiOiJja2F1OHRwbzAwbTUyMnVwaGRnazI1OHYzIn0.T_4I3ASdnmYBYKAM5iSvxQ',
 );
 
-const QUITO_CENTER = [-78.507751, -0.208946];
-
 const App = () => {
-  const [centerCoordinate, setCenterCoordinate] = useState(QUITO_CENTER);
   const [waypoints, setWaypoints] = useState([]);
-
   const addWaypoint = event => {
     const newWaypoint = {coordinates: event.geometry.coordinates};
     setWaypoints([...waypoints, newWaypoint]);
   };
 
-  const [todos, setTodos] = useState([]);
+  const [places, setPlaces] = useState([]);
   useEffect(() => {
-    AsyncStorage.getItem('todos')
+    AsyncStorage.getItem('places')
       .then(response => {
         if (response !== null) {
-          setTodos(JSON.parse(response));
+          setPlaces(JSON.parse(response));
         }
       })
-      .catch(error => {});
-  }, [todos]);
+      .catch(error => console.log(error));
+  }, [places]);
 
-  const data = todos.map((todo, index) => ({
+  const data = places.map((place, index) => ({
     id: index.toString(),
-    direccion1: todo.dic1,
-    direccion2: todo.dic2,
+    direccion1: place.dic1,
+    direccion2: place.dic2,
   }));
 
   function Item({title}) {
     return (
-      <View style={styles.item}>
-        <TouchableOpacity
-          style={{...styles.buttonPlaces, backgroundColor: 'darkgrey'}}
-          onPress={() => setNewCoordinates(title)}>
-          <Text style={styles.text}>{title}</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity
+        style={{...styles.buttonPlaces}}
+        onPress={() => setNewCoordinates({title})}>
+        <Text style={styles.text}>{title}</Text>
+      </TouchableOpacity>
     );
   }
 
-  const list = (
-    <FlatList
-      data={data}
-      renderItem={({item}) => (
-        <Item title={item.direccion1 + ' -> ' + item.direccion2} />
-      )}
-      keyExtractor={item => item.id}
-    />
-  );
+  const [refresh, setRefresh] = useState(false);
 
   const [directions, setDirections] = useState([]);
   const getDirections = async () => {
@@ -100,7 +86,7 @@ const App = () => {
           waypoints[0].coordinates[1] +
           ',' +
           waypoints[0].coordinates[0] +
-          '?json=1&auth=802371203359246534665x6018',
+          '?json=1&auth=123177714881531e15916530x6130',
       )
         .then(response => response.json())
         .then(json => {
@@ -113,7 +99,7 @@ const App = () => {
           waypoints[1].coordinates[1] +
           ',' +
           waypoints[1].coordinates[0] +
-          '?json=1&auth=802371203359246534665x6018',
+          '?json=1&auth=123177714881531e15916530x6130',
       )
         .then(response => response.json())
         .then(json => {
@@ -122,15 +108,17 @@ const App = () => {
         });
 
       const jsonValue = JSON.stringify([
-        ...todos,
-        // {name: direccion1 + ' -> ' + direccion2},
+        ...places,
         {dic1: direccion1, dic2: direccion2},
       ]);
       // console.log(waypoints[0].coordinates[0]);
 
-      AsyncStorage.setItem('todos', jsonValue).then(() =>
+      await AsyncStorage.setItem('places', jsonValue).then(() =>
         console.log('POGGERS: ' + jsonValue),
       );
+
+      setRefresh(!refresh);
+      console.log(refresh);
     }
   };
 
@@ -162,6 +150,10 @@ const App = () => {
     ],
   };
 
+  const [centerCoordinate, setCenterCoordinate] = useState([
+    -78.507751,
+    -0.208946,
+  ]);
   const setCurrentPosition = () => {
     PermissionsAndroid.check(
       PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
@@ -181,9 +173,11 @@ const App = () => {
     setCurrentPosition();
   };
 
-  const deleteAll = () => {
-    AsyncStorage.clear();
-    setTodos([]);
+  const deleteAll = async () => {
+    await AsyncStorage.clear();
+    setPlaces([]);
+    setRefresh(!refresh);
+    console.log(refresh);
   };
 
   useEffect(() => {
@@ -243,7 +237,14 @@ const App = () => {
           <Text style={styles.text}>Borrar lista</Text>
         </TouchableOpacity>
 
-        {list}
+        <FlatList
+          data={data}
+          extraData={refresh}
+          renderItem={({item}) => (
+            <Item title={item.direccion1 + ' -> ' + item.direccion2} />
+          )}
+          keyExtractor={item => item.id}
+        />
       </View>
     </>
   );
@@ -277,10 +278,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'black',
   },
   map: {
-    flex: 1,
     borderStyle: 'solid',
     borderWidth: 5,
     borderColor: '#81020E',
+    height: '60%',
   },
 });
 
